@@ -170,6 +170,7 @@ public class App {
         try {
             producer.send(record)
                     .get(kafkaTimeoutMillis, TimeUnit.MILLISECONDS);
+            log.debug("Written record {} to Kafka", record);
         } catch (Exception e) {
             log.error("An error occurred sending to Kafka.", e);
         }

@@ -34,7 +34,7 @@ public class App {
 
     //region lifecycle
     /**
-     * The wait time in between each event.
+     * The wait time in between each event in milliseconds.
      */
     private int waitTime;
 
@@ -65,6 +65,11 @@ public class App {
      * Kafka client ID.
      */
     private String clientId;
+
+    /**
+     * Timeout for Kafka producer send operation in milliseconds.
+     */
+    private Long kafkaTimeoutMillis;
     //endregion
 
     //region resources
@@ -82,11 +87,6 @@ public class App {
      * Kafka producer.
      */
     private Producer<Integer, String> producer;
-
-    /**
-     * Timeout for Kafka producer send operation in milliseconds.
-     */
-    private Long kafkaTimeoutMillis;
     //endregion
 
 

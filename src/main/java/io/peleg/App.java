@@ -7,7 +7,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Random;
-import java.util.stream.IntStream;
 
 public final class App {
     /**
@@ -26,20 +25,24 @@ public final class App {
         mapper.registerModule(new JavaTimeModule());
 
         for (int i = 0; i < limit; i++) {
-            Event data = createRandomEvent(random);
+            String data = getRandomEventJson(random, mapper);
 
             if (dryRun) {
                 System.out.println(data);
             } else {
-                writeToKafka(data, mapper);
+                writeToKafka(data);
             }
 
             Thread.sleep(waitTime);
         }
     }
 
-    private static void writeToKafka(Event event, ObjectMapper objectMapper) throws JsonProcessingException {
-        String json = objectMapper.writeValueAsString(event);
+    private static void writeToKafka(String event) {
+
+    }
+
+    private static String getRandomEventJson(Random random, ObjectMapper objectMapper) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(createRandomEvent(random));
     }
 
     private static Event createRandomEvent(Random random){

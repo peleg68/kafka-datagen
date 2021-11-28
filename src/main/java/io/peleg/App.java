@@ -3,6 +3,7 @@ package io.peleg;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.apache.kafka.clients.producer.ProducerRecord;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -10,22 +11,70 @@ import java.util.Random;
 
 public final class App {
     /**
-     * Main method.
+     * The default wait time in between each event.
+     */
+    private static final int DEFAULT_WAIT_TIME = 250;
+
+    /**
+     * The wait time in between each event.
+     */
+    private int waitTime;
+
+    /**
+     * A maximum limit of events to produce to Kafka.
+     */
+    private int limit;
+
+    /**
+     * When set to true, the application will print values
+     * instead of sending them to Kafka.
+     */
+    private boolean dryRun;
+
+    /**
+     * The name of the Kafka topic to produce to.
+     */
+    private String topicName;
+
+    /**
+     * The random that will be used to generate random events.
+     */
+    private Random random;
+
+    /**
+     * The object mapper used to serialize events to JSON.
+     */
+    private ObjectMapper mapper;
+
+    /**
+     * Default constructor.
+     */
+    public App() {
+        setParamsFromEnv();
+        random = new Random();
+        mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+    }
+
+
+    /**
      * @param args
      */
-    public static void main(final String[] args) throws InterruptedException, JsonProcessingException {
-        int waitTime = getEnvVarInt("WAIT_TIME", 250);
+    public static void main(final String[] args)
+            throws InterruptedException, JsonProcessingException {
+        App app = new App();
 
-        int limit = getEnvVarInt("LIMIT", Integer.MAX_VALUE);
+        app.start();
+    }
 
-        boolean dryRun = getEnvVarBool("DRY_RUN", true);
-
-        Random random = new Random();
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-
+    /**
+     * Start generating data and producing it to Kafka.
+     * @throws JsonProcessingException
+     * @throws InterruptedException
+     */
+    public void start() throws JsonProcessingException, InterruptedException {
         for (int i = 0; i < limit; i++) {
-            String data = getRandomEventJson(random, mapper);
+            String data = getRandomEventJson();
 
             if (dryRun) {
                 System.out.println(data);
@@ -37,19 +86,29 @@ public final class App {
         }
     }
 
-    private static void writeToKafka(String event) {
-
+    private void setParamsFromEnv() {
+        waitTime = getEnvVarInt("WAIT_TIME", DEFAULT_WAIT_TIME);
+        limit = getEnvVarInt("LIMIT", Integer.MAX_VALUE);
+        dryRun = getEnvVarBool("DRY_RUN", true);
+        topicName = getEnvVar("TOPIC_NAME", "datagen");
     }
 
-    private static String getRandomEventJson(Random random, ObjectMapper objectMapper) throws JsonProcessingException {
-        return objectMapper.writeValueAsString(createRandomEvent(random));
+    private void writeToKafka(final String event) {
+        ProducerRecord<Integer, String> record =
+                new ProducerRecord<>(topicName, event);
     }
 
-    private static Event createRandomEvent(Random random){
+    private String getRandomEventJson() throws JsonProcessingException {
+        return mapper.writeValueAsString(createRandomEvent());
+    }
+
+    private Event createRandomEvent() {
+        final int amountOfTypes = 3;
+
         return Event.builder()
                 .timestamp(Instant.now())
                 .goodness(random.nextDouble())
-                .type(random.nextInt(0,4))
+                .type(random.nextInt(0, amountOfTypes + 1))
                 .build();
     }
 
@@ -68,7 +127,8 @@ public final class App {
                 .map(Boolean::parseBoolean);
     }
 
-    private static Boolean getEnvVarBool(final String name, final boolean fallback) {
+    private static Boolean getEnvVarBool(final String name,
+                                         final boolean fallback) {
         return getEnvVarBool(name)
                 .orElse(fallback);
     }
@@ -81,6 +141,4 @@ public final class App {
         return getEnvVar(name)
                 .orElse(fallback);
     }
-
-    private App() { }
 }

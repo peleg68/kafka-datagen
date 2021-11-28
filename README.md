@@ -1,3 +1,3 @@
 # kafka-datagen
 
-A simple Python tool to generate data and stream it to Kafka.
+A simple Java tool to generate data and stream it to Kafka.

@@ -116,7 +116,9 @@ public class App {
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
                 StringSerializer.class.getName());
 
-        producer = new KafkaProducer<>(kafkaProps);
+        if (!dryRun) {
+            producer = new KafkaProducer<>(kafkaProps);
+        }
     }
 
 

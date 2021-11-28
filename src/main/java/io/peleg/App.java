@@ -3,18 +3,36 @@ package io.peleg;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.IntegerSerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
-public final class App {
+@Slf4j
+public class App {
+    //region default values
+    /**
+     * Default timeout for Kafka producer send operation in milliseconds.
+     */
+    private static final  int DEFAULT_KAFKA_TIMEOUT_MILLIS = 500;
+
+
     /**
      * The default wait time in between each event.
      */
     private static final int DEFAULT_WAIT_TIME = 250;
+    //endregion
 
+    //region lifecycle
     /**
      * The wait time in between each event.
      */
@@ -30,12 +48,26 @@ public final class App {
      * instead of sending them to Kafka.
      */
     private boolean dryRun;
+    //endregion
 
+    //region kafka
     /**
      * The name of the Kafka topic to produce to.
      */
     private String topicName;
 
+    /**
+     * Kafka cluster servers.
+     */
+    private String bootstrapServers;
+
+    /**
+     * Kafka client ID.
+     */
+    private String clientId;
+    //endregion
+
+    //region resources
     /**
      * The random that will be used to generate random events.
      */
@@ -47,6 +79,18 @@ public final class App {
     private ObjectMapper mapper;
 
     /**
+     * Kafka producer.
+     */
+    private Producer<Integer, String> producer;
+
+    /**
+     * Timeout for Kafka producer send operation in milliseconds.
+     */
+    private Long kafkaTimeoutMillis;
+    //endregion
+
+
+    /**
      * Default constructor.
      */
     public App() {
@@ -54,6 +98,25 @@ public final class App {
         random = new Random();
         mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
+
+        Properties kafkaProps = new Properties();
+        kafkaProps.put(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                bootstrapServers);
+
+        kafkaProps.put(
+                ProducerConfig.CLIENT_ID_CONFIG,
+                clientId);
+
+        kafkaProps.put(
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                IntegerSerializer.class.getName());
+
+        kafkaProps.put(
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class.getName());
+
+        producer = new KafkaProducer<>(kafkaProps);
     }
 
 
@@ -77,7 +140,7 @@ public final class App {
             String data = getRandomEventJson();
 
             if (dryRun) {
-                System.out.println(data);
+                log.info(data);
             } else {
                 writeToKafka(data);
             }
@@ -91,11 +154,23 @@ public final class App {
         limit = getEnvVarInt("LIMIT", Integer.MAX_VALUE);
         dryRun = getEnvVarBool("DRY_RUN", true);
         topicName = getEnvVar("TOPIC_NAME", "datagen");
+        bootstrapServers = getEnvVar("BOOTSTRAP_SERVERS", "localhost:9092");
+        clientId = getEnvVar("CLIENT_ID", "datagen");
+        kafkaTimeoutMillis = Long.valueOf(getEnvVarInt(
+                "KAFKA_TIMEOUT_MILLIS",
+                DEFAULT_KAFKA_TIMEOUT_MILLIS));
     }
 
     private void writeToKafka(final String event) {
         ProducerRecord<Integer, String> record =
                 new ProducerRecord<>(topicName, event);
+
+        try {
+            producer.send(record)
+                    .get(kafkaTimeoutMillis, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.error("An error occurred sending to Kafka.", e);
+        }
     }
 
     private String getRandomEventJson() throws JsonProcessingException {

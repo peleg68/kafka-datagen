@@ -114,6 +114,7 @@ services:
     image: us.gcr.io/secor-demo/secor:latest
     depends_on:
       - kafka
+      - zookeeper
       - minio
       - minio-setup
     environment:

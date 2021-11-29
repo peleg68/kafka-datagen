@@ -118,7 +118,7 @@ services:
       - minio
       - minio-setup
     environment:
-      CONFIG_FILE: secor.kubernetes-dev.partition.properties
+      CONFIG_FILE: /opt/secor/config/secor.kubernetes-dev.backup.properties
       LOG4J_CONFIGURATION: /opt/secor/config/log4j.docker.properties
       ZOOKEEPER_QUORUM: zookeeper:2181
       ZOOKEEPER_PATH: secor

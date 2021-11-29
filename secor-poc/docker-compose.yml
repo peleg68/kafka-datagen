@@ -109,4 +109,13 @@ services:
     image: trinodb/trino:358
     profiles: ["client"]
     entrypoint: ["trino", "--server", "trino:8080", "--catalog", "s3", "--schema", "default"]
+  
+  secor:
+    image: us.gcr.io/secor-demo/secor:latest
+    depends_on:
+      - kafka
+      - minio
+      - minio-setup
+    networks:
+      - kafka
 

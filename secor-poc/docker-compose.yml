@@ -111,7 +111,7 @@ services:
     entrypoint: ["trino", "--server", "trino:8080", "--catalog", "s3", "--schema", "default"]
   
   secor:
-    image: us.gcr.io/secor-demo/secor:latest
+    image: peleg686/secor:master
     depends_on:
       - kafka
       - zookeeper

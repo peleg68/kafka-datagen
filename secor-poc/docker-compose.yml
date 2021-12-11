@@ -124,6 +124,8 @@ services:
       ZOOKEEPER_PATH: secor
     volumes:
       - ./secor:/opt/secor/config
+      - ./secor_data/message_logs/backup:/mnt/secor_data/message_logs/backup
+      - ./secor_data/message_logs/partition:/mnt/secor_data/message_logs/partition
     networks:
       - kafka
 

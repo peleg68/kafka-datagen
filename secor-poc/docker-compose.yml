@@ -38,6 +38,8 @@ services:
     image: kafka-datagen:latest
     depends_on:
       - kafka
+    env_file:
+      - datagen.env
     networks:
       - kafka
 

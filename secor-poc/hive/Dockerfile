@@ -1,4 +1,4 @@
-FROM arm64v8/openjdk:8u312-jre
+FROM openjdk:8u312-jre
 
 WORKDIR /opt
 

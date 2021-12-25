@@ -39,7 +39,7 @@ services:
     depends_on:
       - kafka
     environment:
-      DRY_RUN: "false"
+      DRY_RUN: 'false'
       BOOTSTRAP_SERVERS: kafka:9092
       WAIT_TIME: 5000
     networks:

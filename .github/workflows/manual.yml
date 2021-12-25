@@ -33,4 +33,4 @@ jobs:
         run: echo "Hello ${{ github.event.inputs.name }}"
       - uses: actions/checkout@v2
       - name: Build the stack
-        run: docker-compose up ./secor-poc
+        run: docker-compose up -f ./secor-poc

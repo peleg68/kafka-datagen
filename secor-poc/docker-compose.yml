@@ -2,6 +2,8 @@ version: '3'
 networks:
   kafka:
     driver: bridge
+  default:
+     name: datalake
 
 services:
   zookeeper:

@@ -35,7 +35,7 @@ services:
       - kafka
   
   datagen:
-    image: kafka-datagen:latest
+    image: kafka-datagen:master
     depends_on:
       - kafka
     env_file:

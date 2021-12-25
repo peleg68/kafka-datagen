@@ -14,6 +14,7 @@ on:
   push:
     branches: # will be triggered when code is pushed to master
       - master
+      - secor-poc
 
 jobs:
   test:

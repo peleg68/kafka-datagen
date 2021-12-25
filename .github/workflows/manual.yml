@@ -11,6 +11,9 @@ on:
         default: 'World'
         # Input has to be provided for the workflow to run
         required: true
+  push:
+    branches: # will be triggered when code is pushed to master
+      - master
 
 jobs:
   test:

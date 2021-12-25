@@ -7,8 +7,6 @@ RUN mvn -B -s /usr/share/maven/ref/settings-docker.xml package
 
 FROM arm64v8/openjdk:17-buster
 
-EXPOSE 8080
-
 RUN mkdir /app
 
 COPY --from=BUILDER /tmp/target/lib /app/lib

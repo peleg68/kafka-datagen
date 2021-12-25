@@ -5,7 +5,7 @@ COPY src /tmp/src/
 WORKDIR /tmp/
 RUN mvn -B -s /usr/share/maven/ref/settings-docker.xml package
 
-FROM arm64v8/openjdk:17-buster
+FROM openjdk:17-buster
 
 RUN mkdir /app
 

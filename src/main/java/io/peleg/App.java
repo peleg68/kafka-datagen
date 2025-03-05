@@ -134,7 +134,7 @@ public class App {
         outputStream = new ByteArrayOutputStream();
         switch (outputFormat) {
             case "JSON":
-                encoder = EncoderFactory.get().jsonEncoder(Event.getClassSchema(), outputStream);
+                encoder = EncoderFactory.get().jsonEncoder(Event.getClassSchema(), outputStream, false);
                 break;
             case "AVRO":
                 encoder = EncoderFactory.get().binaryEncoder(outputStream, null);
@@ -227,7 +227,9 @@ public class App {
         try {
             writer.write(avroObject, encoder);
             encoder.flush();
-            return outputStream.toByteArray();
+            byte[] serializedBytes = outputStream.toByteArray();
+            outputStream.reset();
+            return serializedBytes;
         } catch (IOException e) {
             log.error("An error occurred serializing Event object.", e);
             return new byte[0];

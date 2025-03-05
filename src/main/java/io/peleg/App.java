@@ -1,8 +1,5 @@
 package io.peleg;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.DecoderFactory;
@@ -118,11 +115,6 @@ public class App {
     private ByteArrayOutputStream outputStream;
 
     /**
-     * The object mapper used to serialize events to JSON.
-     */
-    private ObjectMapper mapper;
-
-    /**
      * Kafka producer.
      */
     private Producer<Integer, byte[]> producer;
@@ -135,8 +127,6 @@ public class App {
     public App() throws IOException {
         setParamsFromEnv();
         random = new Random();
-        mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
         writer = new SpecificDatumWriter<>(Event.class);
         outputStream = new ByteArrayOutputStream();
         switch (outputFormat) {
@@ -185,12 +175,12 @@ public class App {
 
     /**
      * Start generating data and producing it to Kafka.
-     * @throws JsonProcessingException
+     * @throws IOException
      * @throws InterruptedException
      */
     public void start() throws IOException, InterruptedException {
         for (int i = 0; i < limit; i++) {
-            byte[] data = getRandomEventJson();
+            byte[] data = getRandomEventSerialized();
 
             if (dryRun) {
                 String printData = dryRunPrintInBase64 ? new SpecificDatumReader<>(Event.class).read(null, DecoderFactory.get().binaryDecoder(data, null)).toString() : new String(data);
@@ -229,7 +219,7 @@ public class App {
         }
     }
 
-    private byte[] getRandomEventJson() throws JsonProcessingException {
+    private byte[] getRandomEventSerialized() {
         return serialize(createRandomEvent());
     }
 

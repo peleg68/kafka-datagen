@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.Encoder;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -65,6 +67,11 @@ public class App {
      * instead of sending them to Kafka.
      */
     private boolean dryRun;
+
+    /**
+     * When set to true and dry run is enabled - the values will be printed in Base64
+     */
+    private boolean dryRunPrintInBase64;
     //endregion
 
     //region kafka
@@ -130,14 +137,16 @@ public class App {
         random = new Random();
         mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
-        writer = new SpecificDatumWriter<>(Event.getClassSchema());
+        writer = new SpecificDatumWriter<>(Event.class);
         outputStream = new ByteArrayOutputStream();
         switch (outputFormat) {
             case "JSON":
                 encoder = EncoderFactory.get().jsonEncoder(Event.getClassSchema(), outputStream, false);
+                dryRunPrintInBase64 = false;
                 break;
             case "AVRO":
                 encoder = EncoderFactory.get().binaryEncoder(outputStream, null);
+                dryRunPrintInBase64 = true;
                 break;
         }
 
@@ -179,12 +188,13 @@ public class App {
      * @throws JsonProcessingException
      * @throws InterruptedException
      */
-    public void start() throws JsonProcessingException, InterruptedException {
+    public void start() throws IOException, InterruptedException {
         for (int i = 0; i < limit; i++) {
             byte[] data = getRandomEventJson();
 
             if (dryRun) {
-                log.info(new String(data));
+                String printData = dryRunPrintInBase64 ? new SpecificDatumReader<>(Event.class).read(null, DecoderFactory.get().binaryDecoder(data, null)).toString() : new String(data);
+                log.info(printData);
             } else {
                 writeToKafka(data);
             }

@@ -11,8 +11,8 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.IntegerSerializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -159,7 +159,7 @@ public class App {
 
         kafkaProps.put(
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                StringSerializer.class.getName());
+                ByteArraySerializer.class.getName());
 
         if (!dryRun) {
             producer = new KafkaProducer<>(kafkaProps);

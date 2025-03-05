@@ -5,7 +5,8 @@
     "fields": [
         {
             "name": "timestamp",
-            "type": "timestamp-millis"
+            "type": "long",
+            "logicalType": "timestamp-millis"
         },
         {
             "name": "goodness",

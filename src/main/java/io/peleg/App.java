@@ -1,9 +1,12 @@
 package io.peleg;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.Encoder;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -11,6 +14,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.IntegerSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Properties;
@@ -30,9 +35,20 @@ public class App {
      * The default wait time in between each event.
      */
     private static final int DEFAULT_WAIT_TIME = 250;
+
+
+    /**
+     * The default wait time in between each event.
+     */
+    private static final String DEFAULT_OUTPUT_FORMAT = "JSON";
     //endregion
 
     //region lifecycle
+    /**
+     * The output format - possible values are "JSON" or "AVRO".
+     */
+    private String outputFormat;
+
     /**
      * The wait time in between each event in milliseconds.
      */
@@ -48,6 +64,12 @@ public class App {
      * instead of sending them to Kafka.
      */
     private boolean dryRun;
+
+    /**
+     * When set to true and dry run is enabled - the values
+     * will be printed in Base64.
+     */
+    private boolean dryRunPrintInBase64;
     //endregion
 
     //region kafka
@@ -79,25 +101,48 @@ public class App {
     private Random random;
 
     /**
-     * The object mapper used to serialize events to JSON.
+     * The writer used for serialization.
      */
-    private ObjectMapper mapper;
+    private DatumWriter<Event> writer;
+
+    /**
+     * The JSON/Avro encoder.
+     */
+    private Encoder encoder;
+
+    /**
+     * The output stream from which data will be read before producing to Kafka.
+     */
+    private ByteArrayOutputStream outputStream;
 
     /**
      * Kafka producer.
      */
-    private Producer<Integer, String> producer;
+    private Producer<Integer, byte[]> producer;
     //endregion
 
 
     /**
      * Default constructor.
      */
-    public App() {
+    public App() throws IOException {
         setParamsFromEnv();
         random = new Random();
-        mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
+        writer = new SpecificDatumWriter<>(Event.class);
+        outputStream = new ByteArrayOutputStream();
+        switch (outputFormat) {
+            case "JSON":
+                encoder = EncoderFactory.get().jsonEncoder(
+                        Event.getClassSchema(), outputStream, false);
+                dryRunPrintInBase64 = false;
+                break;
+            case "AVRO":
+                encoder = EncoderFactory.get().binaryEncoder(
+                        outputStream, null);
+                dryRunPrintInBase64 = true;
+                break;
+            default:
+        }
 
         Properties kafkaProps = new Properties();
         kafkaProps.put(
@@ -126,7 +171,7 @@ public class App {
      * @param args
      */
     public static void main(final String[] args)
-            throws InterruptedException, JsonProcessingException {
+            throws InterruptedException, IOException {
         App app = new App();
 
         app.start();
@@ -134,15 +179,20 @@ public class App {
 
     /**
      * Start generating data and producing it to Kafka.
-     * @throws JsonProcessingException
+     * @throws IOException
      * @throws InterruptedException
      */
-    public void start() throws JsonProcessingException, InterruptedException {
+    public void start() throws IOException, InterruptedException {
         for (int i = 0; i < limit; i++) {
-            String data = getRandomEventJson();
+            byte[] data = getRandomEventSerialized();
 
             if (dryRun) {
-                log.info(data);
+                String printData = dryRunPrintInBase64
+                        ? new SpecificDatumReader<>(Event.class)
+                                .read(null, DecoderFactory.get()
+                                        .binaryDecoder(data, null)).toString()
+                        : new String(data);
+                log.info(printData);
             } else {
                 writeToKafka(data);
             }
@@ -152,6 +202,7 @@ public class App {
     }
 
     private void setParamsFromEnv() {
+        outputFormat = getEnvVar("OUTPUT_FORMAT", DEFAULT_OUTPUT_FORMAT);
         waitTime = getEnvVarInt("WAIT_TIME", DEFAULT_WAIT_TIME);
         limit = getEnvVarInt("LIMIT", Integer.MAX_VALUE);
         dryRun = getEnvVarBool("DRY_RUN", true);
@@ -163,8 +214,8 @@ public class App {
                 DEFAULT_KAFKA_TIMEOUT_MILLIS));
     }
 
-    private void writeToKafka(final String event) {
-        ProducerRecord<Integer, String> record =
+    private void writeToKafka(final byte[] event) {
+        ProducerRecord<Integer, byte[]> record =
                 new ProducerRecord<>(topicName, event);
 
         try {
@@ -176,17 +227,30 @@ public class App {
         }
     }
 
-    private String getRandomEventJson() throws JsonProcessingException {
-        return mapper.writeValueAsString(createRandomEvent());
+    private byte[] getRandomEventSerialized() {
+        return serialize(createRandomEvent());
+    }
+
+    private byte[] serialize(final Event avroObject) {
+        try {
+            writer.write(avroObject, encoder);
+            encoder.flush();
+            byte[] serializedBytes = outputStream.toByteArray();
+            outputStream.reset();
+            return serializedBytes;
+        } catch (IOException e) {
+            log.error("An error occurred serializing Event object.", e);
+            return new byte[0];
+        }
     }
 
     private Event createRandomEvent() {
         final int amountOfTypes = 3;
 
-        return Event.builder()
-                .timestamp(Instant.now())
-                .goodness(random.nextDouble())
-                .type(random.nextInt(0, amountOfTypes + 1))
+        return Event.newBuilder()
+                .setTimestamp(Instant.now())
+                .setGoodness(random.nextDouble())
+                .setType(random.nextInt(0, amountOfTypes + 1))
                 .build();
     }
 

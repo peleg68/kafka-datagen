@@ -1,0 +1,19 @@
+{
+    "type": "record",
+    "namespace": "io.peleg",
+    "name": "Event",
+    "fields": [
+        {
+            "name": "timestamp",
+            "type": "timestamp-millis"
+        },
+        {
+            "name": "goodness",
+            "type": "double"
+        },
+        {
+            "name": "type",
+            "type": "long"
+        }
+    ]
+}

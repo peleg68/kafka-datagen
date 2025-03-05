@@ -66,7 +66,8 @@ public class App {
     private boolean dryRun;
 
     /**
-     * When set to true and dry run is enabled - the values will be printed in Base64
+     * When set to true and dry run is enabled - the values
+     * will be printed in Base64.
      */
     private boolean dryRunPrintInBase64;
     //endregion
@@ -131,13 +132,16 @@ public class App {
         outputStream = new ByteArrayOutputStream();
         switch (outputFormat) {
             case "JSON":
-                encoder = EncoderFactory.get().jsonEncoder(Event.getClassSchema(), outputStream, false);
+                encoder = EncoderFactory.get().jsonEncoder(
+                        Event.getClassSchema(), outputStream, false);
                 dryRunPrintInBase64 = false;
                 break;
             case "AVRO":
-                encoder = EncoderFactory.get().binaryEncoder(outputStream, null);
+                encoder = EncoderFactory.get().binaryEncoder(
+                        outputStream, null);
                 dryRunPrintInBase64 = true;
                 break;
+            default:
         }
 
         Properties kafkaProps = new Properties();
@@ -183,7 +187,11 @@ public class App {
             byte[] data = getRandomEventSerialized();
 
             if (dryRun) {
-                String printData = dryRunPrintInBase64 ? new SpecificDatumReader<>(Event.class).read(null, DecoderFactory.get().binaryDecoder(data, null)).toString() : new String(data);
+                String printData = dryRunPrintInBase64
+                        ? new SpecificDatumReader<>(Event.class)
+                                .read(null, DecoderFactory.get()
+                                        .binaryDecoder(data, null)).toString()
+                        : new String(data);
                 log.info(printData);
             } else {
                 writeToKafka(data);
@@ -223,7 +231,7 @@ public class App {
         return serialize(createRandomEvent());
     }
 
-    public byte[] serialize(Event avroObject) {
+    private byte[] serialize(final Event avroObject) {
         try {
             writer.write(avroObject, encoder);
             encoder.flush();

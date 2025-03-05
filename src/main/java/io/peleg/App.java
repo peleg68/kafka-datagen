@@ -183,10 +183,10 @@ public class App {
     private Event createRandomEvent() {
         final int amountOfTypes = 3;
 
-        return Event.builder()
-                .timestamp(Instant.now())
-                .goodness(random.nextDouble())
-                .type(random.nextInt(0, amountOfTypes + 1))
+        return Event.newBuilder()
+                .setTimestamp(Instant.now())
+                .setGoodness(random.nextDouble())
+                .setType(random.nextInt(0, amountOfTypes + 1))
                 .build();
     }
 
